@@ -157,7 +157,7 @@ def fm(n):
 # ============================================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    p = get_player(user.id)
+    get_player(user.id)
     update_player(user.id, username=user.username or "", first_name=user.first_name or "")
 
     text = (
@@ -167,7 +167,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "🎰 Играй в казино — умножай деньги\n"
         "🎁 Получай бонус каждый день\n"
         "🏆 Поднимайся в топе игроков\n\n"
-        "**Команды:**\n"
+        "Команды:\n"
         "/profile — профиль\n"
         "/shop — магазин бизнесов\n"
         "/my_biz — мои бизнесы\n"
@@ -185,7 +185,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("🎁 Бонус", callback_data="bonus")],
     ])
 
-    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+    await update.message.reply_text(text, reply_markup=keyboard)
 
 
 async def profile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -197,14 +197,14 @@ async def profile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     inc = total_income(user.id)
 
     text = (
-        f"👤 **Профиль игрока**\n\n"
-        f"🆔 ID: `{user.id}`\n"
+        f"👤 Профиль игрока\n\n"
+        f"🆔 ID: {user.id}\n"
         f"📛 Имя: {user.first_name}\n"
-        f"💰 Баланс: **{fm(p['balance'])}**\n"
-        f"⭐ Уровень: **{p['level']}**\n"
+        f"💰 Баланс: {fm(p['balance'])}\n"
+        f"⭐ Уровень: {p['level']}\n"
         f"📊 XP: {p['xp']}\n\n"
-        f"💼 Бизнесов: **{len(bizs)}**\n"
-        f"📈 Доход: **{fm(inc)}/час**\n\n"
+        f"💼 Бизнесов: {len(bizs)}\n"
+        f"📈 Доход: {fm(inc)}/час\n\n"
         f"🏆 Побед: {p['total_wins']}\n"
         f"💀 Проигрышей: {p['total_losses']}\n"
         f"📅 В игре с: {datetime.fromtimestamp(p['registered']).strftime('%d.%m.%Y')}"
@@ -218,9 +218,9 @@ async def profile_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ])
 
     if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.callback_query.edit_message_text(text, reply_markup=keyboard)
     else:
-        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.message.reply_text(text, reply_markup=keyboard)
 
 
 async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -231,22 +231,22 @@ async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bizs = get_businesses(user.id)
     owned = {b["type"]: b for b in bizs}
 
-    text = f"💼 **Магазин бизнесов**\n\n💰 Баланс: **{fm(p['balance'])}**\n\n"
+    text = f"💼 Магазин бизнесов\n\n💰 Баланс: {fm(p['balance'])}\n\n"
     buttons = []
     for key, biz in BIZ.items():
         if key in owned:
             lvl = owned[key]["level"]
             price = biz_price(key, lvl + 1)
             inc = biz_income(key, lvl + 1)
-            text += f"{biz['emoji']} **{biz['name']}** (ур. {lvl})\n"
-            text += f"   Апгрейд: {fm(price)} → {fm(inc)}/час\n\n"
+            text += f"{biz['emoji']} {biz['name']} (ур. {lvl})\n"
+            text += f"Апгрейд: {fm(price)} → {fm(inc)}/час\n\n"
             buttons.append([InlineKeyboardButton(
                 f"⬆️ {biz['emoji']} {biz['name']} → ур.{lvl+1} ({fm(price)})",
                 callback_data=f"upgrade:{key}"
             )])
         else:
-            text += f"{biz['emoji']} **{biz['name']}**\n"
-            text += f"   {fm(biz['price'])} → {fm(biz['income'])}/час\n\n"
+            text += f"{biz['emoji']} {biz['name']}\n"
+            text += f"{fm(biz['price'])} → {fm(biz['income'])}/час\n\n"
             buttons.append([InlineKeyboardButton(
                 f"💰 {biz['emoji']} {biz['name']} ({fm(biz['price'])})",
                 callback_data=f"buy:{key}"
@@ -256,9 +256,9 @@ async def shop_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup(buttons)
 
     if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.callback_query.edit_message_text(text, reply_markup=keyboard)
     else:
-        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.message.reply_text(text, reply_markup=keyboard)
 
 
 async def my_biz_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -270,7 +270,7 @@ async def my_biz_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not bizs:
         text = "💼 У тебя нет бизнесов.\n\nЗайди в /shop чтобы купить!"
     else:
-        text = "💼 **Твои бизнесы:**\n\n"
+        text = "💼 Твои бизнесы:\n\n"
         for b in bizs:
             biz = BIZ[b["type"]]
             inc = biz_income(b["type"], b["level"])
@@ -282,9 +282,9 @@ async def my_biz_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ])
 
     if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.callback_query.edit_message_text(text, reply_markup=keyboard)
     else:
-        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.message.reply_text(text, reply_markup=keyboard)
 
 
 async def casino_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -294,8 +294,8 @@ async def casino_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     p = get_player(user.id)
 
     text = (
-        f"🎰 **Казино**\n\n"
-        f"💰 Баланс: **{fm(p['balance'])}**\n\n"
+        f"🎰 Казино\n\n"
+        f"💰 Баланс: {fm(p['balance'])}\n\n"
         f"Выбери игру:"
     )
     keyboard = InlineKeyboardMarkup([
@@ -306,9 +306,9 @@ async def casino_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     ])
 
     if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.callback_query.edit_message_text(text, reply_markup=keyboard)
     else:
-        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.message.reply_text(text, reply_markup=keyboard)
 
 
 async def bonus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -323,18 +323,18 @@ async def bonus_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         left = cooldown - (now - p["last_bonus"])
         h = left // 3600
         m = (left % 3600) // 60
-        text = f"⏳ Бонус получен!\n\nСледующий через: **{h}ч {m}м**"
+        text = f"⏳ Бонус получен!\n\nСледующий через: {h}ч {m}м"
     else:
         bonus = 500 * p["level"]
         update_player(user.id, balance=p["balance"] + bonus, last_bonus=now)
-        text = f"🎁 Бонус: **+{fm(bonus)}**!\n\n💰 Баланс: {fm(p['balance'] + bonus)}"
+        text = f"🎁 Бонус: +{fm(bonus)}!\n\n💰 Баланс: {fm(p['balance'] + bonus)}"
 
     keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Профиль", callback_data="back_profile")]])
 
     if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.callback_query.edit_message_text(text, reply_markup=keyboard)
     else:
-        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.message.reply_text(text, reply_markup=keyboard)
 
 
 async def top_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -347,7 +347,7 @@ async def top_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not rows:
         text = "🏆 Пока никто не играет."
     else:
-        text = "🏆 **Топ-10 игроков:**\n\n"
+        text = "🏆 Топ-10 игроков:\n\n"
         medals = ["🥇", "🥈", "🥉"]
         for i, (name, bal) in enumerate(rows):
             m = medals[i] if i < 3 else f"{i+1}."
@@ -356,14 +356,14 @@ async def top_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = InlineKeyboardMarkup([[InlineKeyboardButton("◀️ Профиль", callback_data="back_profile")]])
 
     if update.callback_query:
-        await update.callback_query.edit_message_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.callback_query.edit_message_text(text, reply_markup=keyboard)
     else:
-        await update.message.reply_text(text, parse_mode="Markdown", reply_markup=keyboard)
+        await update.message.reply_text(text, reply_markup=keyboard)
 
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
-        "📖 **Помощь**\n\n"
+        "📖 Помощь\n\n"
         "/start — главное меню\n"
         "/profile — профиль\n"
         "/shop — магазин\n"
@@ -371,19 +371,16 @@ async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/casino — казино\n"
         "/bonus — ежедневный бонус\n"
         "/top — топ игроков\n\n"
-        "**Как играть:**\n"
+        "Как играть:\n"
         "1. Получи бонус (/bonus) — 500$\n"
         "2. Купи бизнес в /shop\n"
         "3. Бизнесы приносят доход\n"
         "4. Играй в казино\n"
         "5. Поднимайся в топе!"
     )
-    await update.message.reply_text(text, parse_mode="Markdown")
+    await update.message.reply_text(text)
 
 
-# ============================================================
-# /stats — для админа
-# ============================================================
 async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if user.id != ADMIN_ID:
@@ -402,17 +399,17 @@ async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     conn.close()
 
     text = (
-        "📊 **СТАТИСТИКА**\n"
+        "📊 СТАТИСТИКА\n"
         "━━━━━━━━━━━━━━━━━\n\n"
-        f"👥 Игроков: **{total_users}**\n"
-        f"💼 Бизнесов: **{total_biz}**\n"
-        f"💰 Денег в игре: **{fm(total_money)}**\n\n"
-        "🏆 **Топ-5:**\n"
+        f"👥 Игроков: {total_users}\n"
+        f"💼 Бизнесов: {total_biz}\n"
+        f"💰 Денег в игре: {fm(total_money)}\n\n"
+        "🏆 Топ-5:\n"
     )
     for i, (name, bal) in enumerate(top):
         text += f"{i+1}. {name or 'Игрок'} — {fm(bal)}\n"
 
-    await update.message.reply_text(text, parse_mode="Markdown")
+    await update.message.reply_text(text)
 
 
 # ============================================================
@@ -484,14 +481,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if win:
                 new_bal = p["balance"] + bet
                 update_player(user.id, balance=new_bal, total_wins=p["total_wins"] + 1)
-                result = f"🎉 **Победа!** +{fm(bet)}\n💰 {fm(new_bal)}"
+                result = f"🎉 Победа! +{fm(bet)}\n💰 {fm(new_bal)}"
             else:
                 new_bal = p["balance"] - bet
                 update_player(user.id, balance=new_bal, total_losses=p["total_losses"] + 1)
-                result = f"💀 **Проигрыш!** -{fm(bet)}\n💰 {fm(new_bal)}"
+                result = f"💀 Проигрыш! -{fm(bet)}\n💰 {fm(new_bal)}"
             await query.edit_message_text(
                 f"🎲 Кубик: {random.randint(1,6)} vs {random.randint(1,6)}\n\n{result}",
-                parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("🎰 Ещё", callback_data="casino"),
                     InlineKeyboardButton("◀️ Профиль", callback_data="back_profile")
@@ -503,14 +499,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if win:
                 new_bal = p["balance"] + bet
                 update_player(user.id, balance=new_bal, total_wins=p["total_wins"] + 1)
-                result = f"🎉 **Победа!** +{fm(bet)}\n💰 {fm(new_bal)}"
+                result = f"🎉 Победа! +{fm(bet)}\n💰 {fm(new_bal)}"
             else:
                 new_bal = p["balance"] - bet
                 update_player(user.id, balance=new_bal, total_losses=p["total_losses"] + 1)
-                result = f"💀 **Проигрыш!** -{fm(bet)}\n💰 {fm(new_bal)}"
+                result = f"💀 Проигрыш! -{fm(bet)}\n💰 {fm(new_bal)}"
             await query.edit_message_text(
-                f"🪙 Монетка: **{side}**\n\n{result}",
-                parse_mode="Markdown",
+                f"🪙 Монетка: {side}\n\n{result}",
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("🎰 Ещё", callback_data="casino"),
                     InlineKeyboardButton("◀️ Профиль", callback_data="back_profile")
@@ -530,14 +525,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 win_amt = bet * mult
                 new_bal = p["balance"] + win_amt
                 update_player(user.id, balance=new_bal, total_wins=p["total_wins"] + 1)
-                res = f"🎉 **+{fm(win_amt)}** (×{mult})\n💰 {fm(new_bal)}"
+                res = f"🎉 +{fm(win_amt)} (×{mult})\n💰 {fm(new_bal)}"
             else:
                 new_bal = p["balance"] - bet
                 update_player(user.id, balance=new_bal, total_losses=p["total_losses"] + 1)
-                res = f"💀 **-{fm(bet)}**\n💰 {fm(new_bal)}"
+                res = f"💀 -{fm(bet)}\n💰 {fm(new_bal)}"
             await query.edit_message_text(
                 f"🎰 Слоты\n\n{result}\n\n{res}",
-                parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("🎰 Ещё", callback_data="casino"),
                     InlineKeyboardButton("◀️ Профиль", callback_data="back_profile")
