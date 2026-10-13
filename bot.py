@@ -8,12 +8,12 @@ from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8946069952:AAEaDHomD3A6xlXUwfqcextImf2I4rpa-vs")
 
 # ============================================================
 # ТВОЙ ID (узнать: @userinfobot)
 # ============================================================
-ADMIN_ID = 0  # ← ЗАМЕНИ НА СВОЙ ID
+ADMIN_ID = 1673532605  # ← ЗАМЕНИ НА СВОЙ ID
 
 # ============================================================
 # БАЗА
