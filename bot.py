@@ -8,7 +8,7 @@ from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8946069952:AAEaDHomD3A6xlXUwfqcextImf2I4rpa-vs")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "8946069952:AAG7hKKLG6ubVP1vXRpLxuie4F91jL_fHjg")
 
 # ============================================================
 # ТВОЙ ID (узнать: @userinfobot)
