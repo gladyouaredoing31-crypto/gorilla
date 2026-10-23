@@ -145,6 +145,11 @@ def get_donate_shop_keyboard():
     return kb.get_keyboard()
 
 # --- ФУНКЦИИ ---
+def check_player(user_id):
+    """Проверяет, есть ли игрок в базе"""
+    cursor.execute("SELECT user_id FROM players WHERE user_id = ?", (user_id,))
+    return cursor.fetchone() is not None
+
 def get_player(user_id):
     cursor.execute("SELECT * FROM players WHERE user_id = ?", (user_id,))
     row = cursor.fetchone()
@@ -187,27 +192,42 @@ vk_session = vk_api.VkApi(token=TOKEN)
 longpoll = VkLongPoll(vk_session)
 vk = vk_session.get_api()
 
-print("🚀 Бот запущен! Команды без слэшей активны.")
+print("🚀 Бот запущен! Система регистрации активна.")
 
 for event in longpoll.listen():
     if event.type == VkEventType.MESSAGE_NEW and event.to_me:
         msg = event.text.lower().strip()
         user_id = event.user_id
         peer_id = event.peer_id
-        player = get_player(user_id)
         now = int(time.time())
+        
+        # ==========================================
+        # 0. ПРОВЕРКА РЕГИСТРАЦИИ И СТАРТ
+        # ==========================================
+        
+        # Если игрок не зарегистрирован, разрешаем только команды старта
+        if not check_player(user_id):
+            if msg in ['начать', 'я', 'меню']:
+                get_player(user_id) # Создаем в БД
+                send_msg(peer_id, "🎉 **Добро пожаловать в игру!**\n\nТвой стартовый капитал: **1.000$**\nЭнергия: **10/10**\n\nВыбирай действия на клавиатуре ниже или пиши команды в чат!", get_main_keyboard())
+            else:
+                send_msg(peer_id, "👋 Привет! Ты тут впервые.\nНапиши **«начать»**, **«я»** или **«меню»**, чтобы зарегистрироваться и получить стартовый капитал.")
+            continue # Пропускаем остальной код для незарегистрированных
+
+        # Если дошли сюда — игрок зарегистрирован
+        player = get_player(user_id)
         is_vip = player[15] > now
         is_admin = (user_id == ADMIN_ID or player[16] == 1)
         
         # ==========================================
-        # 1. ТАЙМЕРЫ
+        # 1. ТАЙМЕРЫ (Проверяются каждое сообщение)
         # ==========================================
         cursor.execute("SELECT id, creator_id, target_id, amount FROM bets WHERE status = 'pending' AND created_at < ?", (now - 600,))
         for bet in cursor.fetchall():
             cursor.execute("UPDATE bets SET status = 'expired' WHERE id = ?", (bet[0],))
             cursor.execute("UPDATE players SET balance = balance + ? WHERE user_id = ?", (bet[3], bet[1]))
             conn.commit()
-            send_msg(peer_id, f"⏳ Ставка от ID {bet[1]} отменена. Деньги возвращены.", from_group=1)
+            send_msg(peer_id, f"⏳ Ставка от ID {bet[1]} отменена (10 мин). Деньги возвращены.", from_group=1)
 
         cursor.execute("SELECT id, creator_id, amount, bet_type FROM bets WHERE status = 'roulette' AND created_at < ?", (now - 60,))
         for rou in cursor.fetchall():
@@ -229,19 +249,19 @@ for event in longpoll.listen():
                 send_msg(peer_id, f"🎰 Выпало: **{bot_roll}** ({color})\n💥 ID {rou[1]} проиграл {format_money(rou[2])}$.", from_group=1)
 
         # ==========================================
-        # 2. АДМИНКА (Без слэшей)
+        # 2. АДМИНКА
         # ==========================================
         if msg == '/a':
-            if not is_admin: continue
-            text = ("👑 **АДМИН-ПАНЕЛЬ**\n\n"
-                    "Команды работают **ответом** на сообщение человека или с указанием @id:\n\n"
-                    "`дай 5000` — выдать деньги\n"
-                    "`алмаз 10` — выдать алмазы\n"
-                    "`выдать админку` — выдать админку\n"
-                    "`забрать админку` — забрать админку\n"
-                    "`сброс` — сбросить энергию и кулдауны\n"
-                    "`лвл 50` — установить уровень")
-            send_msg(peer_id, text)
+            if is_admin:
+                text = ("👑 **АДМИН-ПАНЕЛЬ**\n\n"
+                        "Команды работают **ответом** на сообщение человека или с указанием @id:\n\n"
+                        "`дай 5000` — выдать деньги\n"
+                        "`алмаз 10` — выдать алмазы\n"
+                        "`выдать админку` — выдать админку\n"
+                        "`забрать админку` — забрать админку\n"
+                        "`сброс` — сбросить энергию и кулдауны\n"
+                        "`лвл 50` — установить уровень")
+                send_msg(peer_id, text)
 
         elif is_admin:
             try:
@@ -256,7 +276,7 @@ for event in longpoll.listen():
                             break
                 
                 if target_id:
-                    get_player(target_id)
+                    get_player(target_id) # Создаем, если нет
                     if cmd == 'дай':
                         amount = int(parts[1])
                         cursor.execute("UPDATE players SET balance = balance + ? WHERE user_id = ?", (amount, target_id))
@@ -282,14 +302,13 @@ for event in longpoll.listen():
             except: pass
 
         # ==========================================
-        # 3. НОВАЯ КОМАНДА: PAY (Перевод)
+        # 3. PAY (Перевод)
         # ==========================================
         elif msg.startswith('перевод '):
             try:
                 parts = msg.split()
                 amount = int(parts[1])
                 
-                # Ищем кому переводим (по ответу или по @id)
                 target_id = event.reply_message['from_id'] if event.reply_message else None
                 if not target_id:
                     for p in parts:
@@ -298,15 +317,15 @@ for event in longpoll.listen():
                             break
                 
                 if not target_id:
-                    send_msg(peer_id, "❌ Ответь на сообщение человека или укажи @id123.\nПример: `pay 500` (ответом) или `pay 500 @id123`")
+                    send_msg(peer_id, "❌ Ответь на сообщение человека или укажи @id123.")
                 elif target_id == user_id:
                     send_msg(peer_id, "❌ Себе переводить нельзя.")
                 elif amount < 10:
                     send_msg(peer_id, "❌ Минимальный перевод: 10$.")
                 elif player[1] < amount:
-                    send_msg(peer_id, "❌ Недостаточно средств на балансе.")
+                    send_msg(peer_id, "❌ Недостаточно средств.")
                 else:
-                    get_player(target_id) # Создаем получателя, если его нет
+                    get_player(target_id)
                     cursor.execute("UPDATE players SET balance = balance - ? WHERE user_id = ?", (amount, user_id))
                     cursor.execute("UPDATE players SET balance = balance + ? WHERE user_id = ?", (amount, target_id))
                     conn.commit()
@@ -318,7 +337,7 @@ for event in longpoll.listen():
         # ==========================================
         # 4. ИГРОВЫЕ КОМАНДЫ
         # ==========================================
-        elif msg in ['профиль', 'начать', '⬅️ назад']:
+        elif msg in ['профиль', 'начать', 'я', 'меню', '⬅️ назад']:
             my_biz = player[13].split(',') if player[13] else []
             total_income = sum(BUSINESSES[b]['income'] for b in my_biz if b in BUSINESSES)
             vip_text = "👑 VIP" if is_vip else ""
