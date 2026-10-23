@@ -5,83 +5,106 @@ import time
 import os
 
 # ============================================================
-# НАСТРОЙКИ (Берутся из переменных Railway)
+# НАСТРОЙКИ
 # ============================================================
 TOKEN = os.environ.get("VK_TOKEN", "vk1.a.NeVzXhHIacAAhMagzCsuKF01C5eCdo9NN5eXDG5TRyklhCV_67EA8Pib3Q-LjGXm-heGXwPq4w0eX2mCJzk_2AaJ1pyYeUWtT-kRC0N_ewpDHD2Phig1yHRHiqCtGVeReu-kyMvOprN3UTxQCoosSvunU_aOY0QY555H6aZAb41p7Vcz3Rfy-eQypM9rK7a-YkzGOpevpE4g5bW-zyPYLg")
 GROUP_ID = os.environ.get("VK_GROUP_ID", "229194730")
 
-# Текст рекламы
-AD_TEXT = (
-"🚀 Крутой игровой бот Jump ждёт тебя! 🚀
+# ТВОЙ ЛИЧНЫЙ ID (чтобы бот слушался только тебя)
+ADMIN_ID = 697665022  # <--- ЗАМЕНИ НА СВОЙ ID (цифры)
 
-✨ Преимущества бота:
-• Интуитивный интерфейс
-• Стабильная работа 24/7
-
-🎯 Переходи к боту: @jumpbot
-💰 Не упусти возможность начать с большим преимуществом!"
-)
-
-# Ключевые слова для триггера
-TRIGGER_WORDS = ['цена', 'купить', 'заказ', 'инфо', 'привет', 'товар']
+TEXT_FILE = "ad_text.txt"
 
 # ============================================================
-# ИНИЦИАЛИЗАЦИЯ
+# ФУНКЦИИ
 # ============================================================
-if not TOKEN or not GROUP_ID:
-    print("❌ Ошибка: Не заданы VK_TOKEN или VK_GROUP_ID")
-    exit(1)
+def get_ad_text():
+    if os.path.exists(TEXT_FILE):
+        with open(TEXT_FILE, 'r', encoding='utf-8') as f:
+            return f.read().strip()
+    return "Реклама пока не задана. Напиши /текст ..."
 
-try:
-    vk_session = vk_api.VkApi(token=TOKEN)
-    vk = vk_session.get_api()
-    longpoll = VkBotLongPoll(vk_session, GROUP_ID)
-    print("✅ Бот успешно подключен к ВК!")
-except Exception as e:
-    print(f"❌ Ошибка подключения: {e}")
-    exit(1)
+def save_ad_text(text):
+    with open(TEXT_FILE, 'w', encoding='utf-8') as f:
+        f.write(text)
+
+vk_session = vk_api.VkApi(token=TOKEN)
+vk = vk_session.get_api()
+longpoll = VkBotLongPoll(vk_session, GROUP_ID)
+
+print("✅ Бот запущен (Режим ЛС)")
 
 def send_msg(peer_id, text):
     try:
-        vk.messages.send(
-            peer_id=peer_id,
-            message=text,
-            random_id=random.randint(0, 2**31)
-        )
+        vk.messages.send(peer_id=peer_id, message=text, random_id=random.randint(0, 2**31))
     except Exception as e:
-        print(f"Ошибка отправки: {e}")
-
-print("🚀 Бот запущен и слушает сообщения...")
+        print(f"❌ Ошибка отправки в {peer_id}: {e}")
 
 # ============================================================
 # ОСНОВНОЙ ЦИКЛ
 # ============================================================
-while True:
-    try:
-        for event in longpoll.listen():
-            # 1. Новое сообщение
-            if event.type == VkBotEventType.MESSAGE_NEW:
-                msg = event.obj.message
-                peer_id = msg['peer_id']
-                text = msg['text'].lower()
-                from_id = msg['from_id']
+for event in longpoll.listen():
+    if event.type == VkBotEventType.MESSAGE_NEW:
+        msg = event.obj.message
+        peer_id = msg['peer_id']
+        text = msg['text'].strip()
+        from_id = msg['from_id']
+        
+        # Работаем только если пишет Админ в ЛС (peer_id = from_id)
+        if from_id == ADMIN_ID and peer_id == ADMIN_ID:
+            if text.startswith('/текст'):
+                new_text = text[6:].strip()
+                if new_text:
+                    save_ad_text(new_text)
+                    send_msg(peer_id, f"✅ Текст обновлен!\n\nПредпросмотр:\n{new_text}")
+                else:
+                    send_msg(peer_id, "❌ Напиши текст после команды. Пример:\n/текст Привет! Заходите к нам...")
+            
+            elif text == '/показать':
+                current = get_ad_text()
+                send_msg(peer_id, f"📝 Текущий текст:\n\n{current}")
                 
-                # Игнорируем ботов
-                if from_id < 0:
+            elif text == '/список':
+                try:
+                    # Получаем список бесед
+                    conversations = vk.messages.getConversations(count=200)
+                    items = conversations['items']
+                    chats = [item for item in items if item['conversation']['peer']['type'] == 'chat']
+                    
+                    if not chats:
+                        send_msg(peer_id, "🤷‍♂️ Бот пока не добавлен ни в одну беседу.")
+                    else:
+                        res = f"📋 Бот добавлен в {len(chats)} бесед:\n\n"
+                        for item in chats:
+                            peer = item['conversation']['peer']
+                            res += f"ID: {peer['local_id']} | {peer.get('title', 'Без названия')}\n"
+                        send_msg(peer_id, res)
+                except Exception as e:
+                    send_msg(peer_id, f"❌ Ошибка получения списка: {e}")
+                    
+            elif text == '/рассылка':
+                ad = get_ad_text()
+                if "Реклама пока не задана" in ad:
+                    send_msg(peer_id, "❌ Сначала задай текст через /текст")
                     continue
-
-                # Проверка на ключевые слова
-                for word in TRIGGER_WORDS:
-                    if word in text:
-                        send_msg(peer_id, AD_TEXT)
-                        break
-
-            # 2. Бота добавили в беседу
-            elif event.type == VkBotEventType.MESSAGE_EVENT:
-                # Если добавили в чат (invite)
-                if event.object.get('type') == 'chat_invite_user':
-                    peer_id = event.object['peer_id']
-                    send_msg(peer_id, "👋 Всем привет! Я бот-помощник. Напишите 'цена', чтобы узнать наши предложения.")
-    except Exception as e:
-        print(f"⚠️ Ошибка Long Poll (переподключение через 5 сек): {e}")
-        time.sleep(5)
+                    
+                send_msg(peer_id, "🚀 Начинаю рассылку по всем беседам...")
+                
+                try:
+                    conversations = vk.messages.getConversations(count=200)
+                    items = conversations['items']
+                    chats = [item for item in items if item['conversation']['peer']['type'] == 'chat']
+                    
+                    success = 0
+                    for item in chats:
+                        target_peer = item['conversation']['peer']['id']
+                        send_msg(target_peer, ad)
+                        success += 1
+                        time.sleep(1) # Задержка чтобы не забанили
+                    
+                    send_msg(peer_id, f"✅ Рассылка завершена! Отправлено в {success} чатов.")
+                except Exception as e:
+                    send_msg(peer_id, f"❌ Ошибка рассылки: {e}")
+                    
+            else:
+                send_msg(peer_id, "👋 Привет, Админ!\n\nКоманды:\n/текст [текст] — задать рекламу\n/показать — посмотреть текущую\n/список — список чатов\n/рассылка — разослать по всем чатам")
